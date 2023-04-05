@@ -35,13 +35,18 @@ void setup() {
   }
   // ... and set it to the current time
   rtc.adjust(DateTime(F(__DATE__), F(__TIME__)));
+  // Animation
+  for (int i = 0; i < 32; i++) {
+    lightPin(i);
+    delay(100);
+  }
 }
 
 void loop() {
   // Read current datetime
   DateTime now = rtc.now();
-  // Light the appropriate LED (0-index)
-  lightPin(now.day()-1);
+  // Light the appropriate LED (0-index, LEDs are positioned in the "wrong" order)
+  lightPin(32-now.day());
   // Wait a bit
   delay(10000);
 }
