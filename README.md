@@ -6,3 +6,4 @@ The physical setup uses four shift registers, 32 LEDs and an RTC module. The wir
 I used an Arduino Nano, but it should work similarly with others. Instead of using one resistor per LED, I used one common resistor, as only one LED lights up at a time anyway.
 
 Have fun!
+![photo_5291845097236842181_y](https://user-images.githubusercontent.com/13370101/230103768-825c5b2a-1836-4eb1-b715-0cc74e1e7b10.jpg)
