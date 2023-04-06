@@ -1,6 +1,11 @@
-// Include the RTC library and declare the relevant object
+// Include the RTC and timezone libraries and declare the relevant object
 #include <RTClib.h>
+#include <Timezone.h>
 RTC_DS3231 rtc;
+
+TimeChangeRule myDST = {"CEST", Last, Sun, Mar, 2, 120};    //Daylight time = UTC + 2 hours
+TimeChangeRule mySTD = {"CET", Last, Sun, Oct, 3, 60};     //Standard time = UTC + 1 hour
+Timezone myTZ(myDST, mySTD);
 
 // Define the pins for the second shift register. The first register has the same pins +3
 int latchPin = 3;
@@ -24,7 +29,7 @@ void setup() {
   digitalWrite(13, LOW);
 
   // Initialize RTC
-  if (! rtc.begin()) {
+  if (!rtc.begin()) {
     Serial.println("Couldn't find RTC");
     Serial.flush();
     while (1);
@@ -33,8 +38,8 @@ void setup() {
     Serial.println("Initialized RTC");
     Serial.flush();
   }
-  // ... and set it to the current time
-  rtc.adjust(DateTime(F(__DATE__), F(__TIME__)));
+  // ... and set it to the current UTC time. Only run this once!
+  //rtc.adjust(DateTime(DateTime(F(__DATE__), F(__TIME__)).unixtime()-2*60*60));
   // Animation
   for (int i = 0; i < 32; i++) {
     lightPin(i);
@@ -44,7 +49,17 @@ void setup() {
 
 void loop() {
   // Read current datetime
-  DateTime now = rtc.now();
+  DateTime nowUTC = rtc.now();
+  // ... and convert it to the correct timezone
+  time_t nowTime = myTZ.toLocal(nowUTC.unixtime());
+  DateTime now = DateTime(nowTime);
+  // Debug printing
+  Serial.print("Time is: ");
+  Serial.print(now.hour());
+  Serial.print(":");
+  Serial.print(now.minute());
+  Serial.print(":");
+  Serial.println(now.second());
   // Light the appropriate LED (0-index, LEDs are positioned in the "wrong" order)
   lightPin(32-now.day());
   // Wait a bit
