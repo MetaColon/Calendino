@@ -6,4 +6,5 @@ The physical setup uses four shift registers, 32 LEDs, one OLED (Sainsmart SPI 1
 I used an Arduino Nano, but it should work similarly with others. Instead of using one resistor per LED, I used one common resistor, as only one LED lights up at a time anyway.
 
 Have fun!
-![photo_5291845097236842181_y](https://user-images.githubusercontent.com/13370101/230103768-825c5b2a-1836-4eb1-b715-0cc74e1e7b10.jpg)
+
+![photo_5294223224923605948_y](https://user-images.githubusercontent.com/13370101/230446326-89a51c52-debb-4777-8d27-a83ece6ded83.jpg)
