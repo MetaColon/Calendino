@@ -21,6 +21,9 @@ int dataPin = 2;
 
 int beepPort = 2;
 
+int player1Port = 0;
+int player2Port = 1;
+
 void setup() {
   // Serial for debugging
   Serial.begin(9600);
@@ -72,12 +75,15 @@ void setup() {
 }
 
 void loop() {
+  if (analogRead(player1Port) > 1000 && analogRead(player2Port > 1000))
+    pong();
+
   // Read current datetime
-  DateTime nowUTC = rtc.now();//DateTime(DateTime(F(__DATE__), F(__TIME__)).unixtime() - 2 * 60 * 60);  //
+  DateTime nowUTC = rtc.now();  //DateTime(DateTime(F(__DATE__), F(__TIME__)).unixtime() - 2 * 60 * 60);  //
   // ... and convert it to the correct timezone
   time_t nowTime = myTZ.toLocal(nowUTC.unixtime());
   DateTime now = DateTime(nowTime);
-  char *buff = malloc(10*sizeof(*buff));
+  char *buff = malloc(10 * sizeof(*buff));
   strcpy(buff, "hh:mm:ss");
   print(now.toString(buff));
   free(buff);
@@ -176,24 +182,23 @@ void alleMeineEntchen() {
     10, 10, 10, 10, 3, 0
   };
   double lengths[] = {
-    1.0/8, 1.0/8, 1.0/8, 1.0/8, 1.0/4, 1.0/4,
-    1.0/8, 1.0/8, 1.0/8, 1.0/8, 1.0/4, -1.0/4,
-    1.0/8, 1.0/8, 1.0/8, 1.0/8, 1.0/4, -1.0/4,
-    1.0/8, 1.0/8, 1.0/8, 1.0/8, 1.0/4, 1.0/4,
-    1.0/8, 1.0/8, 1.0/8, 1.0/8, 1.0/4, -1.0/4
+    1.0 / 8, 1.0 / 8, 1.0 / 8, 1.0 / 8, 1.0 / 4, 1.0 / 4,
+    1.0 / 8, 1.0 / 8, 1.0 / 8, 1.0 / 8, 1.0 / 4, -1.0 / 4,
+    1.0 / 8, 1.0 / 8, 1.0 / 8, 1.0 / 8, 1.0 / 4, -1.0 / 4,
+    1.0 / 8, 1.0 / 8, 1.0 / 8, 1.0 / 8, 1.0 / 4, 1.0 / 4,
+    1.0 / 8, 1.0 / 8, 1.0 / 8, 1.0 / 8, 1.0 / 4, -1.0 / 4
   };
-  playSong(1760, 2000, tones, lengths , 30);
+  playSong(1760, 2000, tones, lengths, 30);
 }
 
 void playSong(long baseFreq, long baseDuration, int *notes, double *lengths, int length) {
   for (int i = 0; i < length; i++) {
-    playNote(baseFreq, notes[i], lengths[i]*baseDuration);
+    playNote(baseFreq, notes[i], lengths[i] * baseDuration);
   }
 }
 
-void playNote(long base, int note, long duration)
-{ 
-  playTone(base*pow(2, 1.0/12*note), duration);
+void playNote(long base, int note, long duration) {
+  playTone(base * pow(2, 1.0 / 12 * note), duration);
 }
 
 // Negative duration means pause
@@ -204,10 +209,99 @@ void playTone(long freq, long duration) {
   }
   Serial.print(freq);
   Serial.println("Hz");
-  for (long i = 0; i < duration*1000; i += 1000000 / freq) {
+  for (long i = 0; i < duration * 1000; i += 1000000 / freq) {
     digitalWrite(beepPort, HIGH);
     delayMicroseconds(500000 / freq);
     digitalWrite(beepPort, LOW);
     delayMicroseconds(500000 / freq);
   }
+}
+
+double ballX = 63.5;
+double ballY = 31.5;
+double velX = 1.0;
+double velY = 0.0;
+long lastUpdate = 0;
+long updateDiff = 10;
+double barHeight = 16;
+int y1 = 26;
+int y2 = 26;
+int score1 = 0;
+int score2 = 0;
+
+void pong() {
+  score1 = 0;
+  score2 = 0;
+  lost();
+  while (score1 < 11 && score2 < 11) {
+    y1 = (long)(1024 - analogRead(player1Port)) * (64 - barHeight) / 1024;
+    y2 = (long)(1024 - analogRead(player2Port)) * (64 - barHeight) / 1024;
+    u8g.firstPage();
+    do {
+      u8g.drawVLine(0, y1, barHeight);
+      u8g.drawVLine(127, y2, barHeight);
+      u8g.drawPixel(ballX, ballY);
+      u8g.setFont(u8g_font_fur14n);
+      char cstr[4];
+      itoa(score1, cstr, 10);
+      u8g.drawStr(10, 20, cstr);
+      itoa(score2, cstr, 10);
+      u8g.drawStr(108, 20, cstr);
+    } while (u8g.nextPage());
+
+    if (millis() - lastUpdate > updateDiff) {
+      lastUpdate = millis();
+      ballX += velX;
+      ballY += velY;
+      edgeCases();
+    }
+  }
+  u8g.firstPage();
+  do {
+    u8g.setFont(u8g_font_courB24);
+    if (score1 == 11)
+      u8g.drawStr(10, 20, "1 has won!");
+    else
+      u8g.drawStr(10, 20, "2 has won!");
+  } while (u8g.nextPage());
+  delay(1000);
+}
+
+void edgeCases() {
+  if ((int)ballX >= 127) {
+    if (y2 <= ballY && y2 + barHeight >= ballY) {
+      ballX = 127;
+      velX = -velX;
+      velY = (ballY - y2 - barHeight / 2) / barHeight * abs(velX);
+    } else {
+      score1++;
+      lost();
+      velX = -velX;
+    }
+  } else if ((int)ballX <= 0) {
+    if (y1 <= ballY && y1 + barHeight >= ballY) {
+      ballX = 0;
+      velX = -velX;
+      velY = (ballY - y1 - barHeight / 2) / barHeight * abs(velX);
+    } else {
+      score2++;
+      lost();
+    }
+  }
+
+  if ((int)ballY >= 63) {
+    ballY = 62;
+    velY = -velY;
+  } else if ((int)ballY <= 0) {
+    ballY = 1;
+    velY = -velY;
+  }
+}
+
+void lost() {
+  ballX = 63.5;
+  ballY = 31.5;
+  velX = 1 + (double)(max(score1, score2)) / 4;
+  velY = 0.0;
+  delay(500);
 }
