@@ -19,21 +19,7 @@ int latchPin = 3;
 int clockPin = 4;
 int dataPin = 2;
 
-// Prints on screen of OLED
-void print(char *text) {
-  u8g.firstPage();
-  do {
-    write(text);
-  } while (u8g.nextPage());
-}
-
-// Writes the text on the current page of OLED
-void write(char *text) {
-  // graphic commands to redraw the complete screen should be placed here
-  u8g.setFont(u8g_font_fur20n);
-  //u8g.setFont(u8g_font_osb21);
-  u8g.drawStr(0, 42, text);
-}
+int beepPort = 2;
 
 void setup() {
   // Serial for debugging
@@ -46,6 +32,10 @@ void setup() {
   pinMode(latchPin + 3, OUTPUT);
   pinMode(clockPin + 3, OUTPUT);
   pinMode(dataPin + 3, OUTPUT);
+
+  pinMode(beepPort, OUTPUT);
+
+  digitalWrite(beepPort, HIGH);
 
   // Turn off LED
   pinMode(13, OUTPUT);
@@ -77,6 +67,8 @@ void setup() {
   } else if (u8g.getMode() == U8G_MODE_HICOLOR) {
     u8g.setHiColorByRGB(255, 255, 255);
   }
+
+  alleMeineEntchen();
 }
 
 void loop() {
@@ -98,8 +90,27 @@ void loop() {
   Serial.println(now.second());
   // Light the appropriate LED (0-index, LEDs are positioned in the "wrong" order)
   lightPin(32 - now.day());
+
+  if (now.hour() == 13 && now.minute() == 12)
+    tuff();
   // Wait a bit
   delay(1000);
+}
+
+// Prints on screen of OLED
+void print(char *text) {
+  u8g.firstPage();
+  do {
+    write(text);
+  } while (u8g.nextPage());
+}
+
+// Writes the text on the current page of OLED
+void write(char *text) {
+  // graphic commands to redraw the complete screen should be placed here
+  u8g.setFont(u8g_font_fur20n);
+  //u8g.setFont(u8g_font_osb21);
+  u8g.drawStr(0, 42, text);
 }
 
 void lightPin(int pin) {
@@ -135,4 +146,68 @@ void shiftOut(int myDataPin, int myClockPin, byte myDataOut) {
     digitalWrite(myDataPin, 0);
   }
   digitalWrite(myClockPin, 0);
+}
+
+// ----- Music ------
+void tuff() {
+  int tones[] = {
+    5, 19, 17, 16, 14, 5, 14, 5, 14,
+    2, 16, 14, 12, 9, 0, 9, 0, 9,
+    4, 18, 16, 14, 13, 4, 13, 4, 13,
+    12, 5, 12, 5, 12, 14, 5, 14, 5, 14
+  };
+  for (int i = 0; i < 37; i++)
+    tones[i] += 5;
+  double lengths[] = {
+    1.0/4, 1.0/4, 1.0/8, 1.0/4, 3.0/8, 1.0/8, 1.0/4, 1.0/8, 1.0/4,
+    1.0/4, 1.0/4, 1.0/8, 1.0/4, 3.0/8, 1.0/8, 1.0/4, 1.0/8, 1.0/4,
+    1.0/4, 1.0/4, 1.0/8, 1.0/4, 3.0/8, 1.0/8, 1.0/4, 1.0/8, 1.0/4,
+    1.0/4, 1.0/8, 1.0/4, 1.0/8, 1.0/4, 1.0/4, 1.0/8, 1.0/4, 1.0/8, 1.0/4, 
+  };
+  playSong(880, 1000, tones, lengths, 37);
+}
+
+void alleMeineEntchen() {
+  int tones[] = {
+    3, 5, 7, 8, 10, 10,
+    12, 12, 12, 12, 10, 0,
+    12, 12, 12, 12, 10, 0,
+    8, 8, 8, 8, 7, 7,
+    10, 10, 10, 10, 3, 0
+  };
+  double lengths[] = {
+    1.0/8, 1.0/8, 1.0/8, 1.0/8, 1.0/4, 1.0/4,
+    1.0/8, 1.0/8, 1.0/8, 1.0/8, 1.0/4, -1.0/4,
+    1.0/8, 1.0/8, 1.0/8, 1.0/8, 1.0/4, -1.0/4,
+    1.0/8, 1.0/8, 1.0/8, 1.0/8, 1.0/4, 1.0/4,
+    1.0/8, 1.0/8, 1.0/8, 1.0/8, 1.0/4, -1.0/4
+  };
+  playSong(1760, 2000, tones, lengths , 30);
+}
+
+void playSong(long baseFreq, long baseDuration, int *notes, double *lengths, int length) {
+  for (int i = 0; i < length; i++) {
+    playNote(baseFreq, notes[i], lengths[i]*baseDuration);
+  }
+}
+
+void playNote(long base, int note, long duration)
+{ 
+  playTone(base*pow(2, 1.0/12*note), duration);
+}
+
+// Negative duration means pause
+void playTone(long freq, long duration) {
+  if (duration < 0) {
+    delay(-duration);
+    return;
+  }
+  Serial.print(freq);
+  Serial.println("Hz");
+  for (long i = 0; i < duration*1000; i += 1000000 / freq) {
+    digitalWrite(beepPort, HIGH);
+    delayMicroseconds(500000 / freq);
+    digitalWrite(beepPort, LOW);
+    delayMicroseconds(500000 / freq);
+  }
 }
